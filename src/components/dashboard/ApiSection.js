@@ -185,7 +185,7 @@ export default function ApiSection({ agentData }) {
           <Code2 className="h-5 w-5 text-emerald-400" /> API Integrations
         </h2>
         <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-          Link your private Echodata balance to external scripts, developer
+          Link Our API to external scripts, developer
           websites, or third-party automated programs using our three simple
           links below.
         </p>
