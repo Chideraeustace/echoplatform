@@ -112,23 +112,57 @@ export default function WalletSection({ agentData }) {
               throw new Error("Agent account profile not found.");
             }
 
-            // 1. Update the transaction status in the collection
+            const agentProfile = agentDoc.data();
+            const topUpAmount = txData.amount || 0;
+
+            // 1. Process and credit the deposit amount to their balance first
+            let updatedBalance =
+              (agentProfile.walletBalance || 0) + topUpAmount;
+
+            // 2. Update the incoming top-up transaction status
             transaction.update(transactionDocRef, {
               status: "completed",
               updatedAt: new Date(),
             });
 
-            // 2. Safely credit the agent's wallet balance
-            const currentBalance = agentDoc.data().walletBalance || 0;
-            const topUpAmount = txData.amount || 0;
+            // 3. Check if agent registration fee needs to be deducted right here
+            const isAlreadyRegistered = agentProfile.isRegistered === true;
+            const registrationFee = 40;
+            let deductionApplied = false;
 
+            if (!isAlreadyRegistered && updatedBalance >= registrationFee) {
+              updatedBalance -= registrationFee;
+              deductionApplied = true;
+
+              const registrationTxRef = doc(
+                collection(db, "echowallet-transactions"),
+              );
+              transaction.set(registrationTxRef, {
+                userId: agentId,
+                amount: registrationFee,
+                type: "purchase",
+                status: "completed",
+                description: "One-time Agent Registration Fee Deduction",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+            }
+
+            // 4. Update the agent profile
             transaction.update(agentDocRef, {
-              walletBalance: currentBalance + topUpAmount,
+              walletBalance: updatedBalance,
+              ...(deductionApplied && { isRegistered: true }),
             });
 
-            setSuccessMessage(
-              `Success! GHS ${topUpAmount.toFixed(2)} has been added to your balance.`,
-            );
+            if (deductionApplied) {
+              setSuccessMessage(
+                `Success! Deposited GHS ${topUpAmount.toFixed(2)}. GHS ${registrationFee.toFixed(2)} was deducted from your wallet balance for account registration.`,
+              );
+            } else {
+              setSuccessMessage(
+                `Success! GHS ${topUpAmount.toFixed(2)} has been added to your balance.`,
+              );
+            }
           });
         } catch (err) {
           console.error("Reconciliation failed:", err);
@@ -139,7 +173,7 @@ export default function WalletSection({ agentData }) {
         } finally {
           setIsReconciling(false);
 
-          // Clean up URL bar parameters so refreshing doesn't re-trigger the script block
+          // Clean up URL bar parameters
           const cleanUrl =
             window.location.protocol +
             "//" +
@@ -153,6 +187,65 @@ export default function WalletSection({ agentData }) {
     handleUrlReconciliation();
   }, [agentData]);
 
+  // --- EFFECT 3: Mount Checker for One-Time Auto-Deduction ---
+  useEffect(() => {
+    const checkRegistrationOnMount = async () => {
+      if (!activeUserId) return;
+
+      try {
+        const agentDocRef = doc(db, "echoagents", activeUserId);
+
+        await runTransaction(db, async (transaction) => {
+          const agentDoc = await transaction.get(agentDocRef);
+
+          if (!agentDoc.exists()) return;
+
+          const agentProfile = agentDoc.data();
+          const isAlreadyRegistered = agentProfile.isRegistered === true;
+          const currentBalance = agentProfile.walletBalance || 0;
+          const registrationFee = 40;
+
+          // If they aren't registered yet, and have enough money in their balance
+          if (!isAlreadyRegistered && currentBalance >= registrationFee) {
+            const finalBalance = currentBalance - registrationFee;
+
+            // Log the purchase receipt document
+            const registrationTxRef = doc(
+              collection(db, "echowallet-transactions"),
+            );
+            transaction.set(registrationTxRef, {
+              userId: activeUserId,
+              amount: registrationFee,
+              type: "purchase",
+              status: "completed",
+              description:
+                "One-time Agent Registration Fee Deduction (Auto-Check)",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+
+            // Update agent profile balance and register them
+            transaction.update(agentDocRef, {
+              walletBalance: finalBalance,
+              isRegistered: true,
+            });
+
+            setSuccessMessage(
+              `Notice: GHS ${registrationFee.toFixed(2)} has been deducted from your wallet balance to activate your agent registration.`,
+            );
+          }
+        });
+      } catch (err) {
+        console.error(
+          "Error executing mount registration verification check:",
+          err,
+        );
+      }
+    };
+
+    checkRegistrationOnMount();
+  }, [activeUserId]);
+
   // --- Existing Submission Handler ---
   const handleTopUpSubmit = async (e) => {
     e.preventDefault();
@@ -160,8 +253,8 @@ export default function WalletSection({ agentData }) {
     setSuccessMessage("");
 
     const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount < 10) {
-      setErrorMessage("The minimum top-up amount is GHS 10.00");
+    if (isNaN(parsedAmount) || parsedAmount < 50) {
+      setErrorMessage("The minimum top-up amount is GHS 50.00");
       return;
     }
 
@@ -224,11 +317,11 @@ export default function WalletSection({ agentData }) {
         </div>
 
         {successMessage && (
-          <div className="mb-4 p-4 bg-emerald-500/5 border border-emerald-500/20 text-emerald-400 text-sm font-mono rounded-xl flex items-center gap-3">
+          <div className="mb-4 p-4 bg-emerald-500/5 border border-emerald-500/20 text-emerald-400 text-sm font-mono rounded-xl flex items-start gap-3">
             {isReconciling ? (
-              <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-400 shrink-0 mt-0.5" />
             ) : (
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
             )}
             <span>{successMessage}</span>
           </div>
@@ -252,7 +345,7 @@ export default function WalletSection({ agentData }) {
               <input
                 type="number"
                 step="0.01"
-                min="10"
+                min="50"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
@@ -261,6 +354,10 @@ export default function WalletSection({ agentData }) {
                 required
               />
             </div>
+            <p className="text-[11px] text-slate-500 mt-1.5 font-mono">
+              * Minimum top-up is GHS 50.00. Account registration requires a
+              one-time GHS 40.00 deduction from your wallet balance.
+            </p>
           </div>
 
           <button
@@ -327,8 +424,13 @@ export default function WalletSection({ agentData }) {
                       className="hover:bg-slate-800/30 transition-colors"
                     >
                       <td className="p-4 space-y-0.5">
-                        <div className="text-slate-200 font-bold truncate max-w-[160px] flex items-center gap-1">
-                          {tx.id}
+                        <div className="text-slate-200 font-bold truncate max-w-[160px] flex flex-col gap-0.5">
+                          <span>{tx.id}</span>
+                          {tx.description && (
+                            <span className="text-[10px] text-amber-400/80 font-normal normal-case">
+                              {tx.description}
+                            </span>
+                          )}
                         </div>
                         <div className="text-[10px] text-slate-500">
                           {txDate}
