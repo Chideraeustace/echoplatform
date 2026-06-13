@@ -4,6 +4,7 @@ import { auth, db } from "../firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail, // Imported for password reset functionality
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { Database, Mail, Lock, ShoppingBag } from "lucide-react";
@@ -14,11 +15,13 @@ export default function AuthPage({ mode }) {
   const [password, setPassword] = useState("");
   const [dataSellingName, setDataSellingName] = useState(""); // New State hook for storefront branding
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState(""); // State for successful password resets
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccessMessage("");
     setLoading(true);
 
     try {
@@ -116,7 +119,7 @@ export default function AuthPage({ mode }) {
             },
             "25gb": {
               size: "25GB",
-              costPrice: 98.70,
+              costPrice: 98.7,
               agentPrice: 0.0,
               isActive: true,
             },
@@ -303,13 +306,36 @@ export default function AuthPage({ mode }) {
               costPrice: 96.0,
               agentPrice: 0.0,
               isActive: true,
-            }
+            },
           },
         });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
       navigate("/dashboard");
+    } catch (err) {
+      setError(err.message.replace("Firebase: ", ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handler for password reset dispatch
+  const handleForgotPassword = async () => {
+    setError("");
+    setSuccessMessage("");
+
+    if (!email) {
+      setError(
+        "Please enter your email address to receive a password reset link.",
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setSuccessMessage("Password reset link sent securely! Check your inbox.");
     } catch (err) {
       setError(err.message.replace("Firebase: ", ""));
     } finally {
@@ -337,6 +363,12 @@ export default function AuthPage({ mode }) {
         {error && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg font-mono">
             {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-lg font-mono">
+            {successMessage}
           </div>
         )}
 
@@ -368,8 +400,8 @@ export default function AuthPage({ mode }) {
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
               <input
-                type="email"
-                required
+                type="type"
+                required={mode === "signup" || !loading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="agent@echodata.io"
@@ -379,14 +411,26 @@ export default function AuthPage({ mode }) {
           </div>
 
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1.5">
-              Password
-            </label>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Password
+              </label>
+              {mode === "login" && (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  className="text-xs font-semibold text-emerald-400 hover:underline hover:text-emerald-300 transition-colors bg-transparent border-none p-0 cursor-pointer disabled:opacity-50"
+                >
+                  Forgot Password?
+                </button>
+              )}
+            </div>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
               <input
                 type="password"
-                required
+                required={mode !== "forgot-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
