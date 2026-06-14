@@ -206,7 +206,7 @@ export default function OrdersSection({ userId }) {
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">
-                          <Clock className="h-3 w-3" /> Processing
+                          <Clock className="h-3 w-3" /> Pending
                         </span>
                       )}
                     </td>

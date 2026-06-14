@@ -47,7 +47,9 @@ export default function AuthPage({ mode }) {
           createdAt: new Date().toISOString(),
           walletBalance: 0.0,
           withdrawableEarnings: 0.0,
-          isRegistered: false, // New agents start as unregistered until they complete onboarding
+          isRegistered: false,
+          isActiveAgent: true,
+          
 
           // Package Matrices
           mtnPackages: {
@@ -404,7 +406,7 @@ export default function AuthPage({ mode }) {
                 required={mode === "signup" || !loading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="agent@echodata.io"
+                placeholder="johndoe@gmail.com"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
               />
             </div>
