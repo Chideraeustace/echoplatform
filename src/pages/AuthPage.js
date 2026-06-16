@@ -7,7 +7,7 @@ import {
   sendPasswordResetEmail, // Imported for password reset functionality
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { Database, Mail, Lock, ShoppingBag } from "lucide-react";
+import { Database, Mail, Lock, ShoppingBag, Phone } from "lucide-react";
 
 export default function AuthPage({ mode }) {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ export default function AuthPage({ mode }) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState(""); // State for successful password resets
   const [loading, setLoading] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -27,9 +28,9 @@ export default function AuthPage({ mode }) {
     try {
       if (mode === "signup") {
         // Enforce entry for data selling name on signup
-        if (!dataSellingName.trim()) {
+        if (!dataSellingName.trim() || phoneNumber.trim().length < 10) {
           throw new Error(
-            "Please specify a valid Data-Selling Name for your workspace.",
+            "Please specify a valid Data-Selling Name or Phone Number for your workspace.",
           );
         }
 
@@ -49,6 +50,7 @@ export default function AuthPage({ mode }) {
           withdrawableEarnings: 0.0,
           isRegistered: false,
           isActiveAgent: true,
+          phone: phoneNumber.trim(),
           
 
           // Package Matrices
@@ -395,6 +397,26 @@ export default function AuthPage({ mode }) {
             </div>
           )}
 
+          {/* PHONE NUMBER FIELD (Renders on Signup) */}
+          {mode === "signup" && (
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1.5">
+                Phone Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
+                <input
+                  type="tel"
+                  required={mode === "signup"}
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="0549876543"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1.5">
               Email Address
@@ -402,7 +424,7 @@ export default function AuthPage({ mode }) {
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
               <input
-                type="type"
+                type="email"
                 required={mode === "signup" || !loading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
