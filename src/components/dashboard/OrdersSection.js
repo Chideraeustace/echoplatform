@@ -198,7 +198,7 @@ export default function OrdersSection({ userId }) {
                       {order.status === "success" ||
                       order.status === "completed" ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">
-                          <CheckCircle2 className="h-3 w-3" /> Fulfilled
+                          <CheckCircle2 className="h-3 w-3" /> Completed
                         </span>
                       ) : order.status === "failed" ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/5 px-2 py-0.5 rounded border border-red-500/10">
@@ -206,7 +206,7 @@ export default function OrdersSection({ userId }) {
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">
-                          <Clock className="h-3 w-3" /> Pending
+                          <Clock className="h-3 w-3" /> {order.status}
                         </span>
                       )}
                     </td>
