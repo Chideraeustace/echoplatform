@@ -24,7 +24,7 @@ export default function OrderSection({ agentData }) {
     if (network === "MTN") {
       networkData = agentData.mtnPackages || {};
     } else if (network === "Telecel") {
-      networkData = agentData.telecelPackages || {};
+      networkData = agentData.vodafonePackages || {};
     } else if (network === "AT") {
       networkData = agentData.airteltigoPackages || {};
     }
