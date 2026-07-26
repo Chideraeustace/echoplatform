@@ -38,6 +38,16 @@ const INITIATE_PAYMENT_URL =
 const CONTACT_PHONE = "+233572004011";
 const CONTACT_PHONE_DISPLAY = "+233 57 200 4011";
 
+// Domains where customers buy bundles — agent sign up/login stays hidden
+// here. Add any other customer-facing domains (e.g. www. variant) to this
+// list. Keep this in sync with the CUSTOMER_ONLY_DOMAINS list in App.jsx.
+const CUSTOMER_ONLY_DOMAINS = ["echodata.xyz", "www.echodata.xyz"];
+
+const isAgentPortalDomain = () => {
+  if (typeof window === "undefined") return true; // fallback for SSR/build time
+  return !CUSTOMER_ONLY_DOMAINS.includes(window.location.hostname);
+};
+
 const NETWORKS = [
   {
     id: "mtn",
@@ -639,6 +649,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showOrderStatusModal, setShowOrderStatusModal] = useState(false);
+  const showAgentFeatures = isAgentPortalDomain();
 
   // Preload bundles for every network in the background as soon as the page
   // loads, so the modal has data ready the instant a user picks a network.
@@ -706,12 +717,16 @@ export default function LandingPage() {
               Buy a Data Bundle
               <ArrowRight className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => navigate("/signup")}
-              className="flex items-center justify-center gap-2 bg-transparent hover:bg-slate-800/60 text-white font-semibold text-sm px-6 py-3 rounded-lg border border-slate-700 transition-colors"
-            >
-              Sign Up as an Agent
-            </button>
+
+            {showAgentFeatures && (
+              <button
+                onClick={() => navigate("/signup")}
+                className="flex items-center justify-center gap-2 bg-transparent hover:bg-slate-800/60 text-white font-semibold text-sm px-6 py-3 rounded-lg border border-slate-700 transition-colors"
+              >
+                Sign Up as an Agent
+              </button>
+            )}
+
             <button
               onClick={() => setShowOrderStatusModal(true)}
               className="flex items-center justify-center gap-2 bg-transparent hover:bg-slate-800/60 text-slate-300 hover:text-white font-semibold text-sm px-6 py-3 rounded-lg border border-slate-800 transition-colors"
